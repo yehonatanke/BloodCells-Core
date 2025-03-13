@@ -115,3 +115,29 @@ def plot_label_distribution_polar(df, label_column):
 
 
 # plot_label_distribution_polar(df, 'label')
+
+def plot_first_images(df, paths='imgPath', label_col='label', num_images_per_label=4):
+    # Get unique labels
+    unique_labels = df[label_col].unique()
+
+    num_labels = len(unique_labels)
+    fig, axes = plt.subplots(num_labels, num_images_per_label,
+                              figsize=(2*num_images_per_label, 2*num_labels))
+
+    if num_labels == 1:
+        axes = axes.reshape(1, -1)
+
+    for i, label in enumerate(unique_labels):
+        label_images = df[df[label_col] == label]
+
+        for j in range(min(num_images_per_label, len(label_images))):
+            img_path = label_images.iloc[j][paths]
+            img = Image.open(img_path)
+            axes[i, j].imshow(img)
+            axes[i, j].axis('off')
+
+            if j == 0:
+                axes[i, j].set_title(label, loc='left', color='blue', fontsize= 12)
+
+    plt.tight_layout()
+    plt.show()
