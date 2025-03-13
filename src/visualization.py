@@ -141,3 +141,197 @@ def plot_first_images(df, paths='imgPath', label_col='label', num_images_per_lab
 
     plt.tight_layout()
     plt.show()
+
+
+# Plot histograms for the red, green, and blue channels across the entire dataset
+def plot_noise_distribution_by_color_channel(df):
+    channels = ['red_channel', 'green_channel', 'blue_channel']
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle('Noise Distribution by Color Channel', fontsize=16, fontweight='bold')
+    sns.set_style("whitegrid")
+    color_map = {
+        'red_channel': '#E63946',
+        'green_channel': '#2A9D8F',
+        'blue_channel': '#457B9D'
+    }
+
+    for  i, (channel, color) in enumerate(zip(channels, color_map)):
+        sns.histplot(data=df,
+                     stat='count',
+                     x=channel,
+                     ax=axes[i],
+                     color=color_map.get(channel, 'gray'),
+                     alpha=0.6,
+                     kde=True)
+        axes[i].set_title(f'{channel.replace("_", " ").title()} Noise Distribution')
+        axes[i].set_xlabel('Noise Value (Sigma)')
+        axes[i].set_ylabel('Count')
+
+    plt.tight_layout()
+    plt.gcf()
+    plt.show()
+
+
+# Plot histograms for the color channels grouped by label
+def plot_noise_distribution_by_label(df):
+    channels = ['red_channel', 'green_channel', 'blue_channel']
+    # Get unique labels
+    labels = df['label'].unique()
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle('Noise Distribution by Label', fontsize=16, fontweight='bold')
+    sns.set_style("whitegrid")
+
+    channel_palettes = [
+        sns.color_palette("Reds", n_colors=len(labels)),
+        sns.color_palette("Greens", n_colors=len(labels)),
+        sns.color_palette("Blues", n_colors=len(labels)),
+    ]
+
+    for i, (channel, palette) in enumerate(zip(channels, channel_palettes)):
+        for j, label in enumerate(labels):
+            label_data = df[df['label'] == label]
+            sns.histplot(data=label_data,
+                         stat='count',
+                         x=channel,
+                         ax=axes[i],
+                         label=label,
+                         alpha=0.4,
+                         kde=True,
+                         color=palette[j])
+
+        axes[i].set_title(f'{channel.replace("_", " ").title()} Noise Distribution by Label')
+        axes[i].set_xlabel('Noise Value (Sigma)')
+        axes[i].set_ylabel('Count')
+        axes[i].legend()
+
+    plt.tight_layout()
+    plt.gcf()
+    plt.show()
+
+
+def plot_color_channel_histogram(data, figsize=(10, 6), show_extreme_values=False):
+    channels=['red_channel', 'green_channel', 'blue_channel']
+    plt.figure(figsize=figsize)
+    sns.set_style("whitegrid")
+
+    color_map = {
+        'red_channel': '#E63946',
+        'green_channel': '#2A9D8F',
+        'blue_channel': '#457B9D'
+    }
+
+    for channel in channels:
+
+        # Calculate min_val and max_val for the current channel
+        min_val = data[channel].min()
+        max_val = data[channel].max()
+
+        if show_extreme_values:
+            label = f"{channel.replace('_', ' ').title()} (Min: {min_val:.03g}, Max: {max_val:.03g})"
+        else:
+            label = channel.replace('_', ' ').title()
+
+        sns.histplot(
+            data=data[channel],
+            stat='count',
+            color=color_map.get(channel, 'gray'),
+            alpha=0.6,
+            label=label, kde= True,
+        )
+
+        sns.kdeplot(label='KDE (Frequency)')
+
+    plt.title('Noise Distribution Across Color Channels', fontsize=16, fontweight='bold')
+    plt.xlabel('Noise Value (Sigma)', fontsize=12)
+    plt.ylabel('Count', fontsize=12)
+    plt.legend(title='Channels', loc='upper right')
+    plt.tight_layout()
+
+    plt.gcf()
+    plt.show()
+
+
+def plot_color_channel_avg(data, column='img_avg_noise'):
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(10, 6))
+
+    sns.histplot(
+        data=data[column],
+        stat='count',
+        alpha=0.7,
+        color=sns.color_palette('ch:s=-.2,r=.6', 5)[2],
+        # color='#6B7280',
+        label="Full Spectrum",
+        kde= True,
+    )
+
+    sns.kdeplot(
+        label='KDE (Frequency)'
+    )
+
+    plt.title('Average Noise Distribution', fontsize=16, fontweight='bold')
+    plt.xlabel('Noise Value (Sigma)', fontsize=12)
+    plt.ylabel('Count', fontsize=12)
+    plt.legend(title='Channel', loc='upper right')
+    plt.tight_layout()
+
+    plt.gcf()
+    plt.show()
+
+
+def plot_violin(dataframe, value_vars, category_col):
+
+    # Melt the dataframe for long-format
+    melted_df = pd.melt(dataframe,
+                        id_vars=[category_col],
+                        value_vars=value_vars,
+                        var_name="Channel",
+                        value_name="Intensity")
+
+    # Color mapping
+    unique_categories = melted_df[category_col].unique()
+    color_map = {cat: px.colors.sequential.thermal[i % len(px.colors.sequential.thermal)]
+                 for i, cat in enumerate(unique_categories)}
+
+    fig = px.violin(
+        melted_df,
+        x="Channel",
+        y="Intensity",
+        color=category_col,
+        box=True,
+        points="all",
+        violinmode='overlay',
+        color_discrete_sequence= px.colors.sequential.Agsunset_r,
+    )
+
+    fig.update_traces(
+        meanline_visible=True,
+        scalegroup='Channel',
+        marker=dict(outliercolor='red',size=4)
+    )
+
+    fig.update_layout(
+        title='Noise Distribution by Color Channel',
+        yaxis_title="Noise Value (Sigma)",
+        legend_title='  Label',
+        title_font_size=20,
+        legend=dict(font=dict(size=12)),
+        xaxis=dict(tickfont=dict(size=12)),
+        yaxis=dict(tickfont=dict(size=12))
+    )
+
+    fig.update_xaxes(
+        ticktext=['Red Channel', 'Green Channel', 'Blue Channel', 'Full Spectrum'],
+        tickvals=["red_channel", "green_channel", "blue_channel", 'img_avg_noise']
+    )
+
+    fig.update_layout(
+        title_font_size=18,
+        width=1100,
+        height=1000
+    )
+
+    fig.show()
+
+# plot_violin(noise_df, value_vars=["red_channel", "green_channel", "blue_channel", 'img_avg_noise'], category_col="label")
+
