@@ -749,3 +749,59 @@ def test_model(test_loader, model, loss_function, accuracy_metric, device, num_c
     confusion_matrix_metric.reset()
     print(f"\n[Test] Loss: {test_loss:.4f} | Accuracy: {test_acc:.2f} | Precision: {test_precision:.2f} | Recall: {test_recall:.2f} | F1-Score: {test_f1:.2f}")
     print("Finished test evaluation.")
+
+
+def plot_confusion_matrix(y_true, y_pred, class_names=None, model_details=None, figsize=(12, 8)):
+    """
+    Plots a confusion matrix with model details.
+
+    Args:
+        y_true (array-like): True labels.
+        y_pred (array-like): Predicted labels.
+        class_names (list, optional): List of class names. Defaults to None, which will generate class names as 'Class 0', 'Class 1', etc.
+        model_details (dict, optional): Dictionary with model details. Defaults to None.
+        figsize (tuple, optional): Size of the figure. Defaults to (12, 8).
+    """
+    conf_matrix = np.array(confusion_matrix(y_true, y_pred))
+    if class_names is None:
+        class_names = [f'Class {i}' for i in range(conf_matrix.shape[0])]
+
+    fig, axs = plt.subplots(1, 1, figsize=figsize)
+    sns.heatmap(conf_matrix,
+                cmap='RdPu',
+                square=True,
+                linewidth=0.3,
+                annot_kws={'size': 12},
+                annot=True,
+                fmt='d',
+                ax=axs,
+                xticklabels=class_names,
+                yticklabels=class_names)
+
+    axs.set_title('Confusion Matrix', fontweight='bold')
+    axs.set_xlabel('Model Prediction', color='#555555')
+    axs.set_ylabel('True Labels', color='#555555')
+
+    # Add model details
+    if model_details is not None:
+        detail_text = (
+            r"$\bf{Model\ Name:}$" + f" {model_details.get('model_name', 'N/A')}\n"
+            r"$\bf{Loss\ Function:}$" + f" {model_details.get('loss_function', 'N/A')}\n"
+            r"$\bf{Optimizer:}$" + f" {model_details.get('optimizer', 'N/A')}\n"
+            r"$\bf{Accuracy\ Metric:}$" + f" {model_details.get('accuracy_metric', 'N/A')}\n"
+            r"$\bf{Learning\ Rate:}$" + f" {model_details.get('learning_rate', 'N/A')}\n"
+            r"$\bf{Epochs:}$" + f" {model_details.get('epochs', 'N/A')}"
+        )
+
+        fig.text(
+            0.02, 0.98, detail_text,
+            ha='left', va='top', fontsize=8,
+            color='#333333',
+            bbox=dict(facecolor='white', edgecolor='lightgray', boxstyle='round,pad=0.2', alpha=0.9)
+        )
+
+    plt.tight_layout()
+    plt.show()
+
+
+
