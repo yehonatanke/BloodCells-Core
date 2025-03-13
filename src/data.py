@@ -178,3 +178,187 @@ def plot_label_distribution(df, label_column):
 
 
 # plot_label_distribution(df, 'label')
+
+class ImageDataset(Dataset):
+    def __init__(self, dataframe, transform=None):
+        self.dataframe = dataframe
+        self.transform = transform
+        self.classes = sorted(self.dataframe['label'].unique())
+        self.class_to_idx = {class_name: idx for idx, class_name in enumerate(self.classes)}
+        self.idx_to_class = {idx: class_name for class_name, idx in self.class_to_idx.items()}
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_path = self.dataframe.iloc[idx]['imgPath']
+        label_str = self.dataframe.iloc[idx]['label']
+        label = self.class_to_idx[label_str]
+        image = Image.open(img_path).convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
+
+# Data transformations (resize and normalization)
+transform = transforms.Compose([
+    transforms.Resize((360, 363)),
+    transforms.ToTensor()
+])
+
+
+full_dataset = ImageDataset(df, transform=transform)
+
+# Compares images from two datasets
+def compare_datasets_images(dataframe1, dataset2, start_idx=0, num_images=8):
+    plt.figure(figsize=(num_images * 2, 4))
+
+    for i in range(num_images):
+        idx = start_idx + i
+
+        img_path1 = dataframe1.iloc[idx]['imgPath']
+        image1 = Image.open(img_path1)
+
+        image2, label2 = dataset2[idx]
+        image2 = image2.permute(1, 2, 0).numpy()
+        ax1 = plt.subplot(2, num_images, i + 1)
+        ax1.imshow(image1)
+        ax1.axis('off')
+        ax1.text(0.98, 0.98, f"Range: [0-255] , (Index: {idx})", fontsize=6, color='blue', ha='right', va='top', transform=ax1.transAxes)
+
+        ax2 = plt.subplot(2, num_images, num_images + i + 1)
+        ax2.imshow(image2)
+        ax2.axis('off')
+        ax2.text(0.98, 0.98, f"Range: [0-1] , (Index: {idx})", fontsize=6, color='blue', ha='right', va='top', transform=ax2.transAxes)
+
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.show()
+
+
+# compare_datasets_images(df, full_dataset, start_idx=0, num_images=8)
+
+def process_image_channels(full_dataset):
+    """
+    Args:
+      full_dataset (ImageDataset): PyTorch dataset containing images
+
+    Returns:
+      pd.DataFrame: DataFrame with image channel statistics and labels
+    """
+    red_sigmas = []
+    green_sigmas = []
+    blue_sigmas = []
+    avg_noises = []
+    labels = []
+
+    # Iterate through the dataset
+    for idx in range(len(full_dataset)):
+        # Get the image and label from the dataset
+        img, label = full_dataset[idx]
+
+        # Convert image to numpy array
+        img_np = img.numpy() if torch.is_tensor(img) else np.array(img)
+
+        # Ensure the image is in the correct shape (channels, height, width)
+        if img_np.ndim == 3 and img_np.shape[0] in [1, 3]:
+            # If channel-first, transpose to channel-last
+            img_np = np.transpose(img_np, (1, 2, 0))
+
+        if img_np.ndim == 0:
+            raise ValueError(f"Image at index {idx} is empty or not in the correct format.")
+
+        # Separate color channels
+        red_channel = img_np[:,:,0]
+        green_channel = img_np[:,:,1]
+        blue_channel = img_np[:,:,2]
+
+        # Calculate estimate_sigma for each channel
+        red_sigma = estimate_sigma(red_channel, average_sigmas=False)
+        green_sigma = estimate_sigma(green_channel, average_sigmas=False)
+        blue_sigma = estimate_sigma(blue_channel, average_sigmas=False)
+
+        # Calculate average noise estimate
+        avg_noise = estimate_sigma(img_np, channel_axis=-1, average_sigmas=True)
+
+        # Store values
+        red_sigmas.append(red_sigma)
+        green_sigmas.append(green_sigma)
+        blue_sigmas.append(blue_sigma)
+        avg_noises.append(avg_noise)
+        labels.append(full_dataset.classes[label])
+
+    # Create a new DataFrame with the results
+    noise_df = pd.DataFrame({
+        'red_channel': red_sigmas,
+        'green_channel': green_sigmas,
+        'blue_channel': blue_sigmas,
+        'img_avg_noise': avg_noises,
+        'label': labels
+    })
+
+    return noise_df
+
+
+# noise_df = process_image_channels(full_dataset)
+
+def inspect_data(df):
+    print("--- Dataset Inspection ---\n")
+
+    print("Unique values in 'label' column:")
+    print(df['label'].unique())
+    print('-' * 50)
+
+    print("Shape of the DataFrame:")
+    print(df.shape)
+    print('-' * 50)
+
+    print("First few rows of the DataFrame:")
+    print(df.head())
+    print('-' * 50)
+
+    print("Unique Values per Column:")
+    print(df.nunique())
+    print('-' * 50)
+
+    null_values = df.isnull().sum()
+    print("Null Values per Column:")
+    print(null_values)
+    print('-' * 50)
+
+    print("Total Number of Values for Each Channel:")
+    channels = df.columns.tolist()
+    for channel in channels:
+        if channel in df.columns:
+            print(f"{channel}: {df[channel].count()}")
+        else:
+            print(f"Column '{channel}' not found in DataFrame.")
+    print('-' * 50)
+
+    print("Minimum Values for Each Channel:")
+    for channel in channels:
+        if channel in df.columns:
+            if pd.api.types.is_numeric_dtype(df[channel]):
+                print(f"{channel}: {df[channel].min()}")
+        else:
+            print(f"Column '{channel}' not found in DataFrame.")
+    print('-' * 50)
+
+    print("Maximum Values for Each Channel:")
+    for channel in channels:
+        if channel in df.columns:
+            if pd.api.types.is_numeric_dtype(df[channel]):
+                print(f"{channel}: {df[channel].max()}")
+        else:
+            print(f"Column '{channel}' not found in DataFrame.")
+    print('-' * 50)
+
+    print("--- End of Inspection ---\n")
+
+
+# inspect_data(noise_df)
+
