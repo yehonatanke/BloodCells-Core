@@ -362,3 +362,56 @@ def inspect_data(df):
 
 # inspect_data(noise_df)
 
+bins = np.percentile(noise_df['img_avg_noise'], np.arange(10, 110, 10))
+print("Bins:", bins)
+
+# lets check the `img_avg_noise` minumum and maximum fits the bins interval
+max_value = noise_df['img_avg_noise'].max()
+min_value = noise_df['img_avg_noise'].min()
+
+print(f"Max: {max_value}, Min: {min_value}")
+
+def categorize_columns(df, columns, bins):
+    for col in columns:
+        # A list to hold the values for the current column
+        categorized = []
+
+        # Iterate over each value in the current column
+        for value in df[col]:
+            # Check if the value is less than the lower edge
+            if value < bins[0]:
+                categorized.append(f'< {bins[0]:.4f}')
+            # Check if the value is greater than or equal to the last bin edge
+            elif value >= bins[-1]:
+                categorized.append(f'> {bins[-1]:.4f}')
+            else:
+                # Iterate over the bin edges to find the bin for the value
+                for i in range(len(bins)-1):
+                    if bins[i] <= value < bins[i+1]:
+                        # Append the range of the bin (e.g., "0.1-0.2")
+                        categorized.append(f'{bins[i]:.4f}-{bins[i+1]:.4f}')
+                        break
+
+        # Add a new column with the categorized values. The new column name is the original
+        # column name with "_categorized" appended to it.
+        df[f'{col}_categorized'] = categorized
+
+
+# columns_to_categorize = ['red_channel', 'green_channel', 'blue_channel', 'img_avg_noise']
+# categorize_columns(noise_df, columns_to_categorize, bins)
+
+# # Let's see the result
+# noise_df.head()
+
+def check_dataframe_bins(dataframe, columns):
+    for column in columns:
+        if column in dataframe.columns:
+            unique_values = dataframe[column].unique()
+            print(f"Unique values in '{column}':\n {unique_values}")
+            print("-" * 60)
+        else:
+            print(f"Warning: Column '{column}' does not exist in the dataframe.")
+
+
+# columns_to_check = ['red_channel_categorized', 'green_channel_categorized', 'blue_channel_categorized', 'img_avg_noise_categorized']
+# check_dataframe_bins(noise_df, columns_to_check)
