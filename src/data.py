@@ -415,3 +415,83 @@ def check_dataframe_bins(dataframe, columns):
 
 # columns_to_check = ['red_channel_categorized', 'green_channel_categorized', 'blue_channel_categorized', 'img_avg_noise_categorized']
 # check_dataframe_bins(noise_df, columns_to_check)
+
+# Check if 'df' is already defined
+if 'df' not in locals() and 'df' not in globals():
+    # Load the data only if 'df' is not already loaded
+    df = load_dataframe('main_DataFrame')
+else:
+    print("DataFrame 'df' is already loaded.\n")
+
+# Perform stratified splitting
+# Split ratio: 70% training, 15% validation, 15% test
+train_df, temp_df = train_test_split(df, test_size=0.3, stratify=df['label'])
+val_df, test_df = train_test_split(temp_df, test_size=0.5, stratify=temp_df['label'])
+
+# Create datasets for each split
+train_dataset = ImageDataset(train_df, transform=transform)
+val_dataset = ImageDataset(val_df, transform=transform)
+test_dataset = ImageDataset(test_df, transform=transform)
+
+# Create dataloaders
+batch_size = 32
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+# Print out the number of images in each set
+print(f'\nTrain set size: {len(train_dataset)}')
+print(f'Validation set size: {len(val_dataset)}')
+print(f'Test set size: {len(test_dataset)}')
+print('-' * 50)
+print(f"Length of train dataloader: {len(train_loader)} batches of {batch_size}")
+print(f"Length of validation dataloader: {len(val_loader)} batches of {batch_size}")
+print(f"Length of test dataloader: {len(test_loader)} batches of {batch_size}")
+
+
+# Check the proportions of the splits relative to the original dataframe
+def check_split_proportions(original_df, *splits):
+    total_rows = len(original_df)
+    proportions = {}
+    for split_name, split_df in splits:
+        split_size = len(split_df)
+        proportions[split_name] = split_size / total_rows
+    return proportions
+
+# Proportions for train_df, temp_df, val_df, test_df
+splits = [
+    ('train_df', train_df),
+    ('temp_df', temp_df),
+    ('val_df', val_df),
+    ('test_df', test_df)
+]
+
+proportions = check_split_proportions(df, *splits)
+
+# Output the proportions of each split relative to the original dataframe
+for split_name, proportion in proportions.items():
+    print(f"{split_name}: {proportion:.4f}")
+
+def get_class_distribution(dataset):
+    class_counts = {}
+    for _, label in dataset:
+        class_name = dataset.idx_to_class[label]
+        class_counts[class_name] = class_counts.get(class_name, 0) + 1
+
+    return class_counts
+
+
+# Inspect the structure and types of the batches in the DataLoader
+for batch in test_loader:
+    print(f"Batch type: {type(batch)}")
+    if isinstance(batch, (tuple, list)):
+        print("Element types:")
+        for i, element in enumerate(batch):
+            print(f"  Element {i}: {type(element)}")
+
+    elif isinstance(batch, dict):
+        print("Keys and types:")
+        for key, value in batch.items():
+            print(f"  Key '{key}': {type(value)}")
+
+    break
