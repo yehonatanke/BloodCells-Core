@@ -1,7 +1,7 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li><a href="#bloodcells-core">BloodCells-Core</a></li>
+    <li><a href="#bloodcell-core">Bloodcell-Core</a></li>
     <li><a href="#supported-models">Supported Models</a>
       <ul>
         <li><a href="#convolutional-neural-networks-cnns">Convolutional Neural Networks</a></li>
@@ -29,7 +29,7 @@
   </ol>
 </details>
 
-# BloodCells-Core
+# BloodCell-Core
 A core codebase for training and predicting blood cell classifications using machine learning. This repository contains the essential scripts extracted from Jupyter notebooks for streamlined usage and development.
 The goal is to implement a simple and small codebase for blood cell analysis, making it easy to understand, modify, and extend for further research or development.
 
